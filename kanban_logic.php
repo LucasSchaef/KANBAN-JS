@@ -1,8 +1,8 @@
 <?php
-if(isset($_POST['ch_id'], $_POST['ch_to'])) {
-	$kanban = new kanban("kanban");
-	$ret = $kanban->update($_POST['ch_id'], $_POST['ch_to']);
-	echo $ret[0]."|".$ret[1];
+if(isset($_POST['ch_id'], $_POST['ch_to'], $_POST['ch_from'])) {
+	$kanban = new kanban("kanban-table");
+	$ret = $kanban->update($_POST['ch_id'], $_POST['ch_to'], $_POST['ch_from']);
+	echo implode("|", $ret);
 }
  
 class kanban {
@@ -12,7 +12,7 @@ class kanban {
 	public $noDataMsg = "<strong>No data found.</strong>";
 	public $errors = array();
 	
-	public function __construct($id) {
+	public function __construct($id = "kanban-table") {
 		$this->id = $id;
 		$this->connectDB("localhost", "root", "", "kanban");
 	}
@@ -36,7 +36,7 @@ class kanban {
 	}
 	
 	private function createTable() {
-		$ret = '<table class="table table-bordered">';
+		$ret = '<table class="table table-bordered" id="'.$this->id.'">';
 		$ret .= '<thead><tr><th>ToDo</th><th>Doing</th><th>Done</th></tr></thead>';
 		$ret .= '<tbody><tr>';
 		
@@ -56,32 +56,20 @@ class kanban {
 			$ret = "";
 			foreach($tasks as $key => $task) {
 				$ret .= '<div class="single_task pull-left" id="'.$task['task_ID'].'" style="margin:10px; background-color:'.$task["task_color"].'">';
-				$ret .= '<div class="single_task_head"><span style="text-color:'.$task["task_color"].'">'.$task["task_name"].'</span></div>';
+				$ret .= '<div class="single_task_head" style="background-color:'.$this->headColor($task['task_color']).'"><span style="text-color:'.$task["task_color"].'">'.$task["task_name"].'</span></div>';
 				$ret .= '<div class="single_task_body"><span>'.$task["task_desc"].'</span></div>';
-				$ret .= '<div class="single_task_footer">';
-					switch($task["task_status"]) {
-						case 0:
-							$ret .= '<a href="#" class="task_change_status">'; // HIER GEHTS WEITER	
-					}
-				$ret .= '</div></div>';
+				$ret .= '</div>';
 			}
 			return $ret;
 		} else $this->errors[] = "The Taks have to be provided as array.";
 	}
 	
-	public function update($ch_id, $ch_to) {
+	public function update($ch_id, $ch_to, $ch_from) {
 		
-		switch($ch_to) {
-			case 'col_todo':
-				$new_col = 0;
-				break;
-			case 'col_doing':
-				$new_col = 1;
-				break;
-			default:
-				$new_col = 2;
-				break;
-		}
+		$cols = array("col_todo" => 0, "col_doing" => 1, "col_done" => 2);
+		
+		$old_col = $cols[$ch_from];
+		$new_col = $cols[$ch_to];
 		
 		if(array_key_exists($new_col, $this->data) && array_key_exists($new_col, $this->data[$new_col])) {
 			return false;
@@ -89,7 +77,11 @@ class kanban {
 			$query = "UPDATE `tasks` SET `task_status`=".$new_col." WHERE `task_ID`=".$ch_id;
 			if($this->db->query($query)) {
 				if($this->getData()) {
-					return array($ch_to, $this->createKanbanPart($this->data[$new_col]));
+					return array(
+								$ch_to, 
+								$this->createKanbanPart($this->data[$new_col]), 
+								(array_key_exists($old_col, $this->data) ? $this->createKanbanPart($this->data[$old_col]) : $this->noDataMsg)
+								);
 				} else {
 					return "Konnte Daten nicht neu laden.";	
 				}
@@ -108,6 +100,21 @@ class kanban {
 	
 	private function closeDB() {
 		$this->db->close();
+	}
+	
+	private function headColor($hex) {
+		$hex = str_replace('#', '', $hex);
+		
+		if (strlen($hex) == 3) {
+			$hex = str_repeat(substr($hex, 0, 1), 2).str_repeat(substr($hex, 1, 1), 2).str_repeat(substr($hex, 2, 1), 2);
+		}
+	
+		$colorVal = hexdec($hex);
+        $rgbArray['red'] = (0xFF & ($colorVal >> 0x10)) - 20;
+        $rgbArray['green'] = (0xFF & ($colorVal >> 0x8)) - 20;
+        $rgbArray['blue'] = (0xFF & $colorVal) - 20;
+
+    	return "rgb(".implode(",", $rgbArray).")";
 	}
 }
 ?>

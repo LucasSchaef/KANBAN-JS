@@ -1,7 +1,7 @@
 <?php
 require_once("kanban_logic.php");
 
-$kanban = new kanban("kanban");
+$kanban = new kanban("kanban-table");
 ?>
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -16,6 +16,14 @@ $kanban = new kanban("kanban");
 <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
 
 <style type="text/css">
+	td.drop-hover div.new-item {
+		width:35%;
+		border:5px dashed #CCCCCC;
+		height:120px;
+		padding:5px;
+		margin:5px;
+	}
+	
 	div.single_task {
 		width:35%;
 		cursor:move;
@@ -25,8 +33,6 @@ $kanban = new kanban("kanban");
 		min-height:20px;
 		font-weight:bold;
 		text-aling:center;
-		background-color:black;
-		opacity:0.5;
 		padding:5px;
 		width:100%
 	}
@@ -60,19 +66,25 @@ $kanban = new kanban("kanban");
         </div>
     </div>
 </div>
+
+
 <script>
 	$(function () {
-		$(".single_task").draggable();
+		$("#kanban-table").on('mouseenter', '.single_task', function() {
+			$(this).draggable();
+		});
+		
 		$( ".kanban_col" ).droppable({
-			hoverClass: "drop-hover",
       		drop: function( event, ui ) {
 				$.post('kanban_logic.php', {
 						ch_id: $(ui.draggable).attr("id"),
-						ch_to: $(this).attr("id")
+						ch_to: $(this).attr("id"),
+						ch_from: $(ui.draggable).parent().attr("id")
 				}, function(data) {
-					$(ui.draggable).remove();
 					var t = data.split("|");
 					$("#"+t[0]).html(t[1]);
+					$("#"+$(ui.draggable).parent().attr("id")).html(t[2]);
+					$(ui.draggable).remove();
 				});
       		}});
 	});
